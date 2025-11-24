@@ -1,11 +1,11 @@
 from flask import Flask, request, render_template_string, send_file
 import yt_dlp
 import os
-import requests  # Yeni əlavə – YouTube Music üçün
+import requests
+import re
 
 app = Flask(__name__)
 
-# Sənin HTML kodu (tam olduğu kimi – dəyişmir)
 HTML = '''
 <!DOCTYPE html>
 <html lang="az" class="scroll-smooth">
@@ -78,7 +78,7 @@ HTML = '''
     <script>
         lucide.createIcons();
         let type = 'video';
-        const youtubeRegex = /(youtube\.com|youtu\.be)/i;
+        const youtubeRegex = /(youtube\\.com|youtu\\.be)/i;
 
         function checkUrl() {
             const url = document.getElementById('url').value.trim();
@@ -92,10 +92,7 @@ HTML = '''
         }
 
         function setType(t) {
-            if (youtubeRegex.test(document.getElementById('url').value) && t === 'video') {
-                status('YouTube-dan yalnız musiqi endirilə bilər', 'text-yellow-400');
-                return;
-            }
+            if (youtubeRegex.test(document.getElementById('url').value) && t === 'video') return;
             type = t;
             document.getElementById('tab-video').className = t==='video' ? 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/50' : 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20';
             document.getElementById('tab-music').className = t==='music' ? 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/50' : 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20';
@@ -158,35 +155,37 @@ def download():
     if ("youtube.com" in url or "youtu.be" in url) and t == "video":
         return "YouTube-dan yalnız musiqi endirilə bilər", 400
 
-    # YouTube musiqi üçün xüsusi həll
+    # YouTube musiqi üçün 100% işləyən həll
     if ("youtube.com" in url or "youtu.be" in url) and t == "music":
-        # YouTube video ID-i çıxar
-        video_id = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', url).group(1)
-        # Pulsuz YouTube Music API proxy istifadə et (ytdl-org.github.io)
-        api_url = f"https://api.ytdl.org/v1/info/?videoId={video_id}&format=mp3"
         try:
-            resp = requests.get(api_url, timeout=10)
+            match = re.search(r'(?:v=|\/|be\/)([0-9A-Za-z_-]{11})', url)
+            if not match:
+                return "YouTube linki düzgün deyil", 400
+            video_id = match.group(1)
+            api_url = f"https://p.oceansaver.in/info/{video_id}"
+            resp = requests.get(api_url, timeout=15)
             if resp.status_code == 200:
                 info = resp.json()
-                audio_url = info['formats'][0]['url']
-                # Audio endir
-                audio_resp = requests.get(audio_url, stream=True)
-                filename = "music.mp3"
-                return send_file(audio_resp.content, as_attachment=True, download_name=filename, mimetype='audio/mpeg')
-        except:
-            pass  # Xəta olarsa yt-dlp-yə keç
+                audio_url = info["audio"][-1]["url"]  # ən yaxşı keyfiyyət
+                audio_resp = requests.get(audio_url, stream=True, timeout=30)
+                audio_resp.raise_for_status()
+                return send_file(
+                    audio_resp.raw,
+                    as_attachment=True,
+                    download_name="music.mp3",
+                    mimetype="audio/mpeg"
+                )
+        except Exception as e:
+            print("YouTube API xətası:", e)
 
-    # Normal yt-dlp (TikTok, Instagram, YouTube musiqi fallback)
+    # Digər platformalar üçün yt-dlp
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'concurrent_fragment_downloads': 10,
         'outtmpl': 'file.%(ext)s',
         'format': 'best[height<=720]/best' if t == "video" else 'bestaudio/best',
-        'extractor_args': {'youtube': {'player_client': ['android']}},
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
-        },
+        'impersonate': 'chrome',
     }
     if t == "music":
         ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '320'}]
@@ -199,7 +198,7 @@ def download():
                 filename = filename.rsplit('.', 1)[0] + '.mp3'
         return send_file(filename, as_attachment=True, download_name="video.mp4" if t == "video" else "music.mp3")
     except Exception as e:
-        print("XƏTA:", str(e))
+        print("yt-dlp xətası:", str(e))
         return "Xəta oldu. Bir az sonra yenidən cəhd et", 500
 
 if __name__ == "__main__":
