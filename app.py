@@ -1,7 +1,6 @@
-from flask import Flask, request, render_template_string, send_file, jsonify
+from flask import Flask, request, render_template_string, send_file
 import yt_dlp
 import os
-import re
 
 app = Flask(__name__)
 
@@ -60,7 +59,7 @@ HTML = '''
                 </button>
 
                 <div id="status" class="mt-6 text-center font-semibold text-lg"></div>
-                <div id="youtube-warning" class="hidden mt-4 p-4 bg-yellow-500/20 border border-yellow-500/40 rounded-2xl text-yellow-300 text-center">
+                <div id="youtube-warning" class="hidden mt-4 p-4 bg-yellow-500/20 border border-yellow-500/40 rounded-2xl text-yellow-300 text-center font-medium">
                     YouTube-dan hazırda yalnız musiqi endirmək mümkündür
                 </div>
 
@@ -70,7 +69,6 @@ HTML = '''
                     <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-pink-400">Təmiz</div><div class="text-sm text-gray-400">Filigransız</div></div>
                 </div>
             </div>
-
             <p class="text-center text-gray-500 text-sm mt-8">© 2025 AxtarGet – Hamı üçün pulsuz</p>
         </div>
     </div>
@@ -81,16 +79,17 @@ HTML = '''
         const youtubeRegex = /(youtube\.com|youtu\.be)/i;
 
         function checkUrl() {
-            const url = document.getElementById('url').value;
+            const url = document.getElementById('url').value.trim();
             const warning = document.getElementById('youtube-warning');
             if (youtubeRegex.test(url)) {
                 setType('music');
                 warning.classList.remove('hidden');
-                document.getElementById('tab-video').style.display = 'none';
-                document.getElementById('tab-music').classList.add('flex-1');
+                document.getElementById('tab-video').style.opacity = '0.5';
+                document.getElementById('tab-video').style.pointerEvents = 'none';
             } else {
                 warning.classList.add('hidden');
-                document.getElementById('tab-video').style.display = 'flex';
+                document.getElementById('tab-video').style.opacity = '1';
+                document.getElementById('tab-video').style.pointerEvents = 'auto';
             }
         }
 
@@ -127,7 +126,12 @@ HTML = '''
                     status('Uğurla endirildi! Növbətini göndər', 'text-green-400');
                     document.getElementById('url').value = '';
                     document.getElementById('youtube-warning').classList.add('hidden');
-                } else status('Xəta oldu. Linki yoxla', 'text-red-400');
+                    document.getElementById('tab-video').style.opacity = '1';
+                    document.getElementById('tab-video').style.pointerEvents = 'auto';
+                } else {
+                    const err = await r.text();
+                    status(err.includes('only music') ? 'YouTube-dan yalnız musiqi endirilə bilər' : 'Xəta oldu. Linki yoxla', 'text-red-400');
+                }
             } catch { status('Bağlantı xətası', 'text-red-400'); }
             finally {
                 document.getElementById('text').textContent = 'ENDİR';
@@ -162,17 +166,36 @@ def download():
     # YouTube-dan video endirməyi blokla
     if "youtube.com" in url or "youtu.be" in url:
         if t == "video":
-            return "YouTube-dan video endirmək hazırda mümkün deyil", 400
+            return "YouTube-dan yalnız musiqi endirilə bilər", 400
 
     opts = {
         'quiet': True,
         'no_warnings': True,
         'concurrent_fragment_downloads': 10,
         'outtmpl': 'file.%(ext)s',
-        'format': 'best[height<=720]/best' if t == "video" else 'bestaudio/best',
+        'retries': 15,
+        'fragment_retries': 15,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+                'skip': ['dash', 'hls'],
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
     }
-    if t == "music":
-        opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '320'}]
+
+    if t == "video":
+        opts['format'] = 'best[height<=720]/best'
+    else:
+        opts['format'] = 'bestaudio/best'
+        opts['postprocessors'] = [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '320',
+        }]
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -180,10 +203,11 @@ def download():
             filename = ydl.prepare_filename(info)
             if t == "music":
                 filename = filename.rsplit('.', 1)[0] + '.mp3'
+
         return send_file(filename, as_attachment=True, download_name="video.mp4" if t == "video" else "music.mp3")
     except Exception as e:
-        print("XƏTA:", e)
-        return "Xəta", 500
+        print("XƏTA:", str(e))
+        return "Xəta oldu. Bir az sonra yenidən cəhd et", 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
