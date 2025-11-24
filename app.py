@@ -84,20 +84,13 @@ HTML = '''
             if (youtubeRegex.test(url)) {
                 setType('music');
                 warning.classList.remove('hidden');
-                document.getElementById('tab-video').style.opacity = '0.5';
-                document.getElementById('tab-video').style.pointerEvents = 'none';
             } else {
                 warning.classList.add('hidden');
-                document.getElementById('tab-video').style.opacity = '1';
-                document.getElementById('tab-video').style.pointerEvents = 'auto';
             }
         }
 
         function setType(t) {
-            if (youtubeRegex.test(document.getElementById('url').value) && t === 'video') {
-                status('YouTube-dan yalnız musiqi endirilə bilər', 'text-yellow-400');
-                return;
-            }
+            if (youtubeRegex.test(document.getElementById('url').value) && t === 'video') return;
             type = t;
             document.getElementById('tab-video').className = t==='video' ? 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/50' : 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20';
             document.getElementById('tab-music').className = t==='music' ? 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/50' : 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20';
@@ -106,9 +99,6 @@ HTML = '''
         async function download() {
             const url = document.getElementById('url').value.trim();
             if (!url) return status('Link daxil et!', 'text-red-400');
-            if (youtubeRegex.test(url) && type === 'video') {
-                return status('YouTube-dan yalnız musiqi endirilə bilər', 'text-yellow-400');
-            }
 
             document.getElementById('text').textContent = 'Endirilir...';
             document.getElementById('icon').setAttribute('data-lucide', 'loader-2');
@@ -125,12 +115,8 @@ HTML = '''
                     a.click();
                     status('Uğurla endirildi! Növbətini göndər', 'text-green-400');
                     document.getElementById('url').value = '';
-                    document.getElementById('youtube-warning').classList.add('hidden');
-                    document.getElementById('tab-video').style.opacity = '1';
-                    document.getElementById('tab-video').style.pointerEvents = 'auto';
                 } else {
-                    const err = await r.text();
-                    status(err.includes('only music') ? 'YouTube-dan yalnız musiqi endirilə bilər' : 'Xəta oldu. Linki yoxla', 'text-red-400');
+                    status('Xəta oldu. Linki yoxla və ya bir az sonra cəhd et', 'text-red-400');
                 }
             } catch { status('Bağlantı xətası', 'text-red-400'); }
             finally {
@@ -163,42 +149,35 @@ def download():
     url = data.get("url")
     t = data.get("type", "video")
 
-    # YouTube-dan video endirməyi blokla
     if "youtube.com" in url or "youtu.be" in url:
         if t == "video":
             return "YouTube-dan yalnız musiqi endirilə bilər", 400
 
-    opts = {
+    ydl_opts = {
         'quiet': True,
         'no_warnings': True,
         'concurrent_fragment_downloads': 10,
         'outtmpl': 'file.%(ext)s',
-        'retries': 15,
-        'fragment_retries': 15,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'web'],
-                'skip': ['dash', 'hls'],
-            }
-        },
+        'retries': 10,
+        'socket_timeout': 30,
         'http_headers': {
-            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
-            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/129',
         },
+        'impersonate': 'chrome',  # ƏN GÜCLÜ BYPASS – 2025 üçün
     }
 
     if t == "video":
-        opts['format'] = 'best[height<=720]/best'
+        ydl_opts['format'] = 'best[height<=720]/best'
     else:
-        opts['format'] = 'bestaudio/best'
-        opts['postprocessors'] = [{
+        ydl_opts['format'] = 'bestaudio/best'
+        ydl_opts['postprocessors'] = [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '320',
         }]
 
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
             if t == "music":
