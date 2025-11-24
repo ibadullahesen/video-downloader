@@ -12,19 +12,24 @@ HTML = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AxtarGet - Video & Musiqi Endir</title>
     <style>
-        body {font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; text-align: center; padding: 20px; margin:0;}
-        .container {max-width: 800px; margin: auto; padding: 30px; background: #111; border-radius: 20px; box-shadow: 0 0 30px rgba(0,255,255,0.2);}
-        h1 {font-size: 2.5em; margin-bottom: 10px; background: linear-gradient(45deg,#00ffcc,#ff00cc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+        :root { --bg: #000; --fg: #fff; --card: #111; --accent: #00ffcc; }
+        [data-theme="light"] { --bg: #fff; --fg: #000; --card: #f9f9f9; --accent: #007bff; }
+        body {font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--fg); text-align: center; padding: 20px; margin:0; transition: 0.3s;}
+        .container {max-width: 800px; margin: auto; padding: 30px; background: var(--card); border-radius: 20px; box-shadow: 0 0 30px rgba(0,255,255,0.2); transition: 0.3s;}
+        h1 {font-size: 2.5em; margin-bottom: 10px; background: linear-gradient(45deg,var(--accent),#ff00cc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
         .tabs {display: flex; justify-content: center; margin: 30px 0;}
         .tab {padding: 15px 30px; background: #222; margin: 0 10px; border-radius: 50px; cursor: pointer; transition: 0.3s;}
-        .tab.active {background: #00ffcc; color: #000; font-weight: bold;}
-        input {width: 80%; padding: 15px; margin: 20px 0; border: none; border-radius: 50px; font-size: 1.1em; background: #222; color: #fff;}
-        button {padding: 15px 40px; background: #00ffcc; color: #000; border: none; border-radius: 50px; font-size: 1.2em; cursor: pointer; font-weight: bold;}
-        #result {margin-top: 20px; font-size: 1.3em;}
+        .tab.active {background: var(--accent); color: var(--bg); font-weight: bold;}
+        input {width: 80%; padding: 15px; margin: 20px 0; border: none; border-radius: 50px; font-size: 1.1em; background: #222; color: var(--fg);}
+        button {padding: 15px 40px; background: var(--accent); color: var(--bg); border: none; border-radius: 50px; font-size: 1.2em; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        #result {margin-top: 20px; font-size: 1.3em; animation: pulse 1.5s infinite;}
+        @keyframes pulse {0%,100%{opacity:1;}50%{opacity:0.5;}}
+        .theme-toggle {position: fixed; top: 20px; right: 20px; padding: 10px; background: var(--accent); border-radius: 50px; cursor: pointer;}
         .footer {margin-top: 50px; color: #666; font-size: 0.9em;}
     </style>
 </head>
 <body>
+    <div class="theme-toggle" onclick="toggleTheme()">🌙/☀</div>
     <div class="container">
         <h1>AxtarGet</h1>
         <p>Filigransız Video & MP3 Endir</p>
@@ -40,6 +45,9 @@ HTML = '''
     </div>
 
     <script>
+        function toggleTheme() {
+            document.body.dataset.theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+        }
         function show(type) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
@@ -50,7 +58,8 @@ HTML = '''
         async function download() {
             const url = document.getElementById('url').value;
             if (!url) return alert("Link daxil et!");
-            document.getElementById('result').innerHTML = "🔄 Endirilir...";
+            const result = document.getElementById('result');
+            result.innerHTML = "🔄 5 saniyə gözlə... Video/Musiqi endirilir...";
             
             const res = await fetch("/download", {
                 method: "POST",
@@ -64,9 +73,9 @@ HTML = '''
                 a.href = URL.createObjectURL(blob);
                 a.download = window.currentType === 'music' ? "music.mp3" : "video.mp4";
                 a.click();
-                document.getElementById('result').innerHTML = "✅ Uğurla endirildi!";
+                result.innerHTML = "✅ Uğurla endirildi!";
             } else {
-                document.getElementById('result').innerHTML = "❌ Xəta oldu. Linki yoxla.";
+                result.innerHTML = "❌ Xəta oldu. Linki yoxla və ya başqa link sına.";
             }
         }
     </script>
@@ -87,26 +96,32 @@ def download():
     if type_ == "music":
         ydl_opts = {
             'format': 'bestaudio/best',
-            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '320'}],
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320',
+            }],
             'outtmpl': 'audio.%(ext)s',
-            'quiet': True
+            'quiet': True,
+            'extractor_args': {'generic': 'impersonate=chrome'},
         }
+        filename_ext = "mp3"
     else:
         ydl_opts = {
             'format': 'best[height<=1080]/best',
             'outtmpl': 'video.%(ext)s',
-            'quiet': True
+            'quiet': True,
+            'extractor_args': {'generic': 'impersonate=chrome'},
         }
+        filename_ext = "mp4"
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            if type_ == "music":
-                filename = filename.rsplit('.', 1)[0] + '.mp3'
-        return send_file(filename, as_attachment=True)
-    except:
-        return "Xəta", 400
+            filename = ydl.prepare_filename(info).rsplit('.', 1)[0] + '.' + filename_ext
+        return send_file(filename, as_attachment=True, download_name=( "music.mp3" if type_ == "music" else "video.mp4" ))
+    except Exception as e:
+        return f"Xəta: {str(e)}", 400
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
