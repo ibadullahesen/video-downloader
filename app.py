@@ -66,7 +66,7 @@ HTML = '''
                 </div>
 
                 <div class="mt-10 grid grid-cols-3 gap-4 text-center">
-                    <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-cyan-400">720p</div><div class="text-sm text-gray-400">Keyfiyyət</div></div>
+                    <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-cyan-400">4k</div><div class="text-sm text-gray-400">Keyfiyyət</div></div>
                     <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-purple-400">5-8 sn</div><div class="text-sm text-gray-400">Sürət</div></div>
                     <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-pink-400">Təmiz</div><div class="text-sm text-gray-400">Filigransız</div></div>
                 </div>
