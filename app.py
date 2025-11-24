@@ -3,10 +3,22 @@ import yt_dlp
 import os
 import threading
 import time
+import glob
 
 app = Flask(__name__)
 
-# Sənin tam HTML-in (heç nə dəyişmir)
+# Downloads qovluğunu təmizləmək üçün funksiya
+def cleanup_old_files():
+    """2 saatdan köhnə faylları sil"""
+    try:
+        current_time = time.time()
+        for file_path in glob.glob("downloads/*.*"):
+            if os.path.getmtime(file_path) < current_time - 7200:  # 2 saat
+                os.remove(file_path)
+    except Exception as e:
+        print(f"Təmizləmə xətası: {e}")
+
+# HTML kodunuz eyni qalır
 HTML = '''
 <!DOCTYPE html>
 <html lang="az" class="scroll-smooth">
@@ -110,18 +122,36 @@ HTML = '''
                 const res = await r.json();
                 if (res.error) return status(res.error, 'text-red-400');
 
+                status('Video yüklənir...', 'text-cyan-400');
+                
                 let ready = false;
-                while (!ready) {
+                let attempts = 0;
+                const maxAttempts = 120; // Maksimum 60 saniyə gözlə
+                
+                while (!ready && attempts < maxAttempts) {
                     await new Promise(r => setTimeout(r, 500));
                     const prog = await fetch("/check/" + res.filename);
                     const p = await prog.json();
-                    if (p.ready) ready = true;
+                    if (p.ready) {
+                        ready = true;
+                        break;
+                    }
+                    if (p.error) {
+                        status('Yükləmə xətası: ' + p.error, 'text-red-400');
+                        break;
+                    }
+                    attempts++;
                 }
 
-                window.location.href = "/get/" + res.filename;
-                status('Uğurla endirildi!', 'text-green-400');
-                document.getElementById('url').value = '';
-            } catch {
+                if (ready) {
+                    window.location.href = "/get/" + res.filename;
+                    status('Uğurla endirildi!', 'text-green-400');
+                    document.getElementById('url').value = '';
+                } else {
+                    status('Yükləmə vaxtı bitdi', 'text-red-400');
+                }
+            } catch (error) {
+                console.error('Xəta:', error);
                 status('Bağlantı xətası', 'text-red-400');
             } finally {
                 document.getElementById('text').textContent = 'ENDİR';
@@ -145,22 +175,26 @@ HTML = '''
 
 # Arxa planda endirən funksiya
 def background_download(url, t, filename):
-    ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
-        'concurrent_fragment_downloads': 50,
-        'outtmpl': filename,
-        'format': 'best[height<=720][ext=mp4]/best[ext=mp4]/best' if t == "video" else 'bestaudio/best',
-        'noplaylist': True,
-    }
-    if t == "music":
-        ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
-    
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'outtmpl': filename,
+            'format': 'best[height<=720][ext=mp4]/best[ext=mp4]/best' if t == "video" else 'bestaudio/best',
+            'noplaylist': True,
+        }
+        if t == "music":
+            ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    except Exception as e:
+        print(f"Yükləmə xətası: {e}")
 
 @app.route("/")
 def index():
+    # Köhnə faylları təmizlə
+    cleanup_old_files()
     return render_template_string(HTML)
 
 @app.route("/start", methods=["POST"])
@@ -183,14 +217,21 @@ def start():
 @app.route("/check/<filename>")
 def check(filename):
     path = os.path.join("downloads", filename)
-    return jsonify({"ready": os.path.exists(path) and os.path.getsize(path) > 1024*1024*3})
+    
+    # Əgər fayl varsa və ölçüsü ən azı 10KB-dırsa hazırdır
+    if os.path.exists(path) and os.path.getsize(path) > 10240:  # 10KB
+        return jsonify({"ready": True})
+    
+    # Əgər fayl yoxdursa və ya çox kiçikdirsə, hələ hazır deyil
+    return jsonify({"ready": False})
 
 @app.route("/get/<filename>")
 def get(filename):
     path = os.path.join("downloads", filename)
     if os.path.exists(path):
-        return send_file(path, as_attachment=True, download_name="video.mp4" if "v" in filename else "music.mp3")
-    return "Fayl hələ hazır deyil", 404
+        download_name = "video.mp4" if "v" in filename else "music.mp3"
+        return send_file(path, as_attachment=True, download_name=download_name)
+    return "Fayl tapılmadı", 404
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
