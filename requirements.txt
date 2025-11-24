@@ -1,4 +1,3 @@
 Flask
-yt-dlp
+yt-dlp[full]
 curl-cffi
-ffmpeg-python
