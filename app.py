@@ -6,70 +6,119 @@ app = Flask(__name__)
 
 HTML = '''
 <!DOCTYPE html>
-<html lang="az">
+<html lang="az" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AxtarGet – Video & MP3</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>AxtarGet – Video & Musiqi Endirici</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        :root{--bg:#0d0b1c;--card:#15132b;--accent:#00f5ff;--accent2:#ff00aa;--text:#e0e0ff;--border:#2a265f;--glow:0 0 20px rgba(0,245,255,0.4);}
-        [data-theme=light]{--bg:#f5f7ff;--card:#ffffff;--accent:#0066ff;--accent2:#ff006e;--text:#1a1a2e;--border:#e0e0ff;--glow:0 0 20px rgba(0,102,255,0.3);}
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;display:flex;min-height:100dvh;align-items:center;justify-content:center;padding:20px;transition:all .4s;background:radial-gradient(circle at 50% 50%,rgba(0,245,255,0.07),transparent 70%);}
-        .card{max-width:460px;width:100%;background:var(--card);border-radius:28px;padding:40px 30px;box-shadow:var(--glow),0 20px 40px rgba(0,0,0,0.3);border:1px solid var(--border);position:relative;overflow:hidden;}
-        .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,245,255,0.1),rgba(255,0,170,0.1));opacity:0.5;}
-        h1{font-family:'Space Grotesk',sans-serif;font-size:3.2em;text-align:center;margin-bottom:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:float 4s ease-in-out infinite;}
-        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-        p.subtitle{text-align:center;color:#999;font-size:1.1em;margin-bottom:30px;}
-        .theme{position:absolute;top:20px;right:20px;font-size:2em;cursor:pointer;z-index:10;}
-        .tabs{display:flex;gap:12px;margin-bottom:30px;}
-        .tab{flex:1;padding:16px;text-align:center;background:rgba(255,255,255,0.05);border:2px solid var(--border);border-radius:16px;cursor:pointer;transition:all .3s;font-weight:600;}
-        .tab.active{background:var(--accent);color:#000;border-color:var(--accent);box-shadow:var(--glow);}
-        input{width:100%;padding:18px 20px;background:rgba(255,255,255,0.07);border:2px solid var(--border);border-radius:18px;color:var(--text);font-size:1.1em;margin-bottom:20px;transition:all .3s;}
-        input:focus{outline:none;border-color:var(--accent);box-shadow:var(--glow);}
-        button{width:100%;padding:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:18px;font-size:1.3em;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:var(--glow);}
-        button:hover{transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,245,255,0.4);}
-        #status{margin-top:25px;padding:16px;border-radius:16px;text-align:center;font-weight:600;font-size:1.1em;min-height:60px;display:flex;align-items:center;justify-content:center;gap:10px;}
-        .spinner{width:22px;height:22px;border:3px solid rgba(0,245,255,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @media(max-width:480px){h1{font-size:2.6em;}.card{padding:30px 20px;}}
+        body { background: linear-gradient(135deg, #0f0229 0%, #1a0033 50%, #0f0229 100%); }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.3; animation: float 20s infinite; }
+        .blob1 { width: 500px; height: 500px; background: #8b5cf6; top: -10%; left: -10%; animation-delay: 0s; }
+        .blob2 { width: 400px; height: 400px; background: #06b6d4; bottom: -10%; right: -10%; animation-delay: 7s; }
+        .blob3 { width: 300px; height: 300px; background: #ec4899; top: 50%; left: 50%; animation-delay: 14s; }
+        @keyframes float { 0%,100% { transform: translate(0,0) rotate(0deg); } 50% { transform: translate(100px, -100px) rotate(180deg); } }
     </style>
 </head>
-<body>
-    <div class="theme" onclick="document.body.dataset.theme=document.body.dataset.theme==='light'?'':'light'">☀️</div>
-    <div class="card">
-        <h1>AxtarGet</h1>
-        <p class="subtitle">Filigransız • 720p • 5 saniyəyə</p>
-        <div class="tabs">
-            <div class="tab active" onclick="setType('video')">Video</div>
-            <div class="tab" onclick="setType('music')">Musiqi</div>
+<body class="min-h-screen relative overflow-hidden text-white">
+    <!-- Animated Blobs -->
+    <div class="blob blob1"></div>
+    <div class="blob blob2"></div>
+    <div class="blob blob3"></div>
+
+    <div class="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <div class="flex justify-center items-center gap-4 mb-4">
+                    <div class="p-4 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-2xl shadow-2xl">
+                        <i data-lucide="download" class="w-10 h-10 text-white"></i>
+                    </div>
+                    <h1 class="text-6xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                        AxtarGet
+                    </h1>
+                </div>
+                <p class="text-gray-300 text-lg">TikTok • Instagram • YouTube – Filigransız endir</p>
+            </div>
+
+            <!-- Main Card -->
+            <div class="bg-white/5 backdrop-blur-2xl rounded-3xl p-8 border border-white/10 shadow-2xl">
+                <!-- Tabs -->
+                <div class="flex gap-4 mb-8">
+                    <button onclick="setType('video')" id="tab-video" class="flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/50">
+                        <i data-lucide="video" class="w-6 h-6"></i> Video
+                    </button>
+                    <button onclick="setType('music')" id="tab-music" class="flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20">
+                        <i data-lucide="music" class="w-6 h-6"></i> Musiqi
+                    </button>
+                </div>
+
+                <!-- Input -->
+                <input type="text" id="url" placeholder="Linki bura yapışdır..." class="w-full px-6 py-5 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/30 transition-all text-lg mb-6">
+
+                <!-- Button -->
+                <button onclick="download()" id="btn" class="w-full py-5 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-black text-xl rounded-2xl hover:shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 flex items-center justify-center gap-3">
+                    <i data-lucide="download" class="w-7 h-7" id="icon"></i>
+                    <span id="text">ENDİR</span>
+                </button>
+
+                <!-- Status -->
+                <div id="status" class="mt-6 text-center font-semibold text-lg"></div>
+
+                <!-- Features -->
+                <div class="mt-10 grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-cyan-400">720p</div><div class="text-sm text-gray-400">Keyfiyyət</div></div>
+                    <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-purple-400">Sürətli</div><div class="text-sm text-gray-400">5 saniyə</div></div>
+                    <div class="bg-white/5 rounded-2xl py-4"><div class="text-3xl font-black text-pink-400">Təmiz</div><div class="text-sm text-gray-400">Filigransız</div></div>
+                </div>
+            </div>
+
+            <p class="text-center text-gray-500 text-sm mt-8">© 2025 AxtarGet – Hamı üçün pulsuz</p>
         </div>
-        <input type="text" id="url" placeholder="TikTok, Instagram, YouTube linki...">
-        <button onclick="download()">ENDİR</button>
-        <div id="status"></div>
     </div>
 
     <script>
-        let type='video';
-        function setType(t){type=t;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));event.target.classList.add('active');}
-        function status(msg,spin=false){const s=document.getElementById('status');s.innerHTML=spin?'<div class="spinner"></div>'+msg:msg;}
-        async function download(){
-            const url=document.getElementById('url').value.trim();
-            if(!url)return status('Link daxil et!');
-            status('Endirilir... 5-10 saniyə',true);
-            const r=await fetch("/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,type})});
-            if(r.ok){
-                const blob=await r.blob();
-                const a=document.createElement('a');
-                a.href=URL.createObjectURL(blob);
-                a.download=type==='music'?'music.mp3':'video.mp4';
-                a.click();
-                status('✅ Uğurla endirildi! Növbətini göndər');
-                document.getElementById('url').value='';
-            }else status('Xəta oldu, linki yoxla');
+        lucide.createIcons();
+        let type = 'video';
+        function setType(t) {
+            type = t;
+            document.getElementById('tab-video').className = t==='video' ? 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/50' : 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20';
+            document.getElementById('tab-music').className = t==='music' ? 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/50' : 'flex-1 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 bg-white/10 text-gray-300 hover:bg-white/20';
         }
-        document.getElementById('url').addEventListener('keypress',e=>e.key==='Enter'&&download());
+        async function download() {
+            const url = document.getElementById('url').value.trim();
+            if (!url) return status('Link daxil et!', 'text-red-400');
+            document.getElementById('text').textContent = 'Endirilir...';
+            document.getElementById('icon').setAttribute('data-lucide', 'loader-2');
+            lucide.createIcons();
+            document.getElementById('icon').classList.add('animate-spin');
+            try {
+                const r = await fetch("/download", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,type})});
+                if (r.ok) {
+                    const blob = await r.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = type==='music'?'music.mp3':'video.mp4';
+                    a.click();
+                    status('Uğurla endirildi! Növbətini göndər', 'text-green-400');
+                    document.getElementById('url').value = '';
+                } else status('Xəta oldu. Linki yoxla', 'text-red-400');
+            } catch { status('Bağlantı xətası', 'text-red-400'); }
+            finally {
+                document.getElementById('text').textContent = 'ENDİR';
+                document.getElementById('icon').setAttribute('data-lucide', 'download');
+                document.getElementById('icon').classList.remove('animate-spin');
+                lucide.createIcons();
+            }
+        }
+        function status(msg, cls) {
+            const s = document.getElementById('status');
+            s.textContent = msg;
+            s.className = 'mt-6 text-center font-bold text-lg ' + cls;
+        }
+        document.getElementById('url').addEventListener('keypress', e => e.key==='Enter' && download());
     </script>
 </body>
 </html>
@@ -103,7 +152,7 @@ def download():
                 filename = filename.rsplit('.', 1)[0] + '.mp3'
         return send_file(filename, as_attachment=True, download_name="video.mp4" if t == "video" else "music.mp3")
     except Exception as e:
-        print(e)
+        print("XƏTA:", e)
         return "Xəta", 500
 
 if __name__ == "__main__":
