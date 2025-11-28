@@ -1,4 +1,4 @@
-Flask
-yt-dlp[full]
-curl-cffi
-gunicorn
+Flask==2.2.5
+gTTS==2.4.0
+gunicorn==21.2.0
+ffmpeg-python==0.2.0
