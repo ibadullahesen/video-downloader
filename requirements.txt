@@ -1,5 +1,5 @@
 Flask==2.2.5
 gunicorn==21.2.0
-yt_dlp==2025.12.01.232025
 ffmpeg-python==0.2.0
 gTTS==2.4.0
+https://github.com/yt-dlp/yt-dlp/archive/master.zip
